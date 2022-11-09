@@ -1,4 +1,4 @@
-# AROON 技术指标实现与优化：使用numba和单调队列将 rolling argmax 算子提速1500倍
+# AROON 技术指标实现与优化：使用 Numba 和单调队列将 rolling argmax 算子提速1500倍
 
 AROON 是一个常见的技术指标，其定义可以参考 [Investopedia](https://www.investopedia.com/terms/a/aroon.asp#toc-formulas-for-the-aroon-indicator)
 
@@ -184,7 +184,7 @@ print('Check down')
 check_signal(down_naive, down_numba)
 ```
 
-测试结果如下，信号中没有 nan 出现，结果全对，耗时 24.3 毫秒
+测试结果如下，信号中没有 nan 出现，结果全对
 
 ```
 CPU times: user 27.8 ms, sys: 189 µs, total: 28 ms
@@ -249,7 +249,7 @@ print('Check down')
 check_signal(down_naive, down_nbque)
 ```
 
-测试结果如下，信号中没有 nan 出现，结果全对，耗时 1.25 毫秒
+测试结果如下，信号中没有 nan 出现，结果全对
 
 ```
 CPU times: user 1.79 ms, sys: 67 µs, total: 1.86 ms
