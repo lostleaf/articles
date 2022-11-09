@@ -1,4 +1,4 @@
-# 使用numba和单调队列将AROON因子提速1500倍
+# AROON 技术指标实现与优化：使用numba和单调队列将 rolling argmax 算子提速1500倍
 
 AROON 是一个常见的技术指标，其定义可以参考 [Investopedia](https://www.investopedia.com/terms/a/aroon.asp#toc-formulas-for-the-aroon-indicator)
 
