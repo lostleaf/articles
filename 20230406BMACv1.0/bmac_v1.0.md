@@ -18,7 +18,7 @@ Binance Market Async Crawler, 简称 BMAC，（又）一个币安全市场实时
 
 以 `usdt_5m_example` 为例，`config.json` 字段含义为
 
-``` json
+``` Javascript
 {
     // 运行周期，5分钟
     "interval": "5m", 
