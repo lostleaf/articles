@@ -24,6 +24,27 @@ BMAC 这个共享K线框架已经发布一段时间，本文主要介绍一个�
 
 或可参考 [github](https://github.com/lostleaf/binance_market_async_crawler/blob/master/usdt_1h_alpha_example/config.json.example)
 
+## 如何使用
+
+本框架与bmac一样，通过读取工作目录下的 json 配置文件初始化程序，并每小时执行因子计算
+
+配置文件样例如下，可参考 `alpha_1h_example` 文件夹下的 json 样例文件
+
+```json
+{
+    "interval": "1h",  执行周期
+    "bmac_dir": "../usdt_1h_alpha",  bmac 文件夹
+    "bmac_expire_sec": 30,  bmac 超时时间（秒）
+    "factors": [["AdaptBollingv3", true, 120, 0, 1]],  中性 factor 配置
+    "filters": [["涨跌幅max", 24], ["Volume", 24]],  中性 filter 配置
+    "debug": false  是否启用 debug 模式，debug 模式会立即运行一次并退出，主要用于检测程序及配置的正确性
+}
+```
+
+然后执行 `python startup.py 配置所在文件夹` 即可
+
+例如可以将 `alpha_1h_example` 文件夹下 `factor_calc.json.example` 文件更名为 `factor_calc.json`，然后执行 `python startup.py alpha_1h_example`
+
 ## 程序设计思路
 
 本程序每小时重复执行以下4步操作：
@@ -31,7 +52,7 @@ BMAC 这个共享K线框架已经发布一段时间，本文主要介绍一个�
 1. 从 BMAC 加载市场信息，即当前正在交易的合约信息
 2. 从 BMAC 加载资金费率
 3. 从 BMAC 读取 K线，并计算因子
-4. 打 log，记录这一轮计算的因子
+4. 打 log，记录这一轮计算的因子，将本轮计算的最新因子存储在 factor_his 文件夹下 csv 文件中
 
 在第 4 步后，增加仓位计算模块和下单模块，则构成完整的实盘策略
 
@@ -147,10 +168,10 @@ def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherMan
     # 算因子（忙等待）
     while True:
         while len(unready_symbols) > 0:
-            readys = {s for s in unready_symbols if candle_mgr.check_ready(s, run_time)}
-            if len(readys) == 0:
+            readies = {s for s in unready_symbols if candle_mgr.check_ready(s, run_time)}
+            if len(readies) == 0:
                 break
-            for sym in readys:
+            for sym in readies:
                 df = candle_mgr.read_candle(sym)
                 df['symbol'] = sym
                 for factor_calc in factor_calcs:
@@ -158,8 +179,8 @@ def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherMan
                 for filter_calc in filter_calcs:
                     filter_calc.calc(df)
                 symbol_data[sym] = df
-            unready_symbols -= readys
-            logging.log(MY_DEBUG_LEVEL, 'readys=%d, unready=%d, read=%d', len(readys), len(unready_symbols),
+            unready_symbols -= readies
+            logging.log(MY_DEBUG_LEVEL, 'readys=%d, unready=%d, read=%d', len(readies), len(unready_symbols),
                         len(symbol_data))
         if len(unready_symbols) == 0:
             break
@@ -167,6 +188,126 @@ def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherMan
             break
         time.sleep(0.01)
     return symbol_data
+```
 
+## 主程序
+
+主程序本质上为一个大 loop，每小时运行以上四个步骤，出错重试
+
+```python
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import logging
+import os
+import sys
+import time
+import traceback
+from datetime import timedelta
+
+import pandas as pd
+
+from config import QuantConfig
+from market import get_fundingrate, load_market
+from utils.commons import (MY_DEBUG_LEVEL, next_run_time, sleep_until_run_time)
+from calc import fetch_swap_candle_data_and_calc_factors_filters
+
+sys.stdout.reconfigure(encoding='utf-8')
+
+# 调试用，实盘可删除参数 level=MY_DEBUG_LEVEL
+logging.addLevelName(MY_DEBUG_LEVEL, 'MyDebug')
+logging.basicConfig(format='%(asctime)s (%(levelname)s) - %(message)s', level=MY_DEBUG_LEVEL, datefmt='%Y%m%d %H:%M:%S')
+
+
+def run_loop(Q: QuantConfig):
+    run_time = next_run_time('1h')
+    if Q.debug:
+        run_time -= timedelta(hours=1)
+
+    # sleep 到小时开始
+    logging.info(f'Next run time: {run_time}')
+    sleep_until_run_time(run_time)
+
+    # 1 加载市场信息
+    symbol_list = load_market(Q.exg_mgr, run_time, Q.bmac_expire_sec)
+    logging.info('获取当前周期合约完成')
+    logging.log(MY_DEBUG_LEVEL, symbol_list[:5])
+
+    # 2 获取当前资金费率
+    df_funding = get_fundingrate(Q.exg_mgr, run_time, Q.bmac_expire_sec)
+    logging.info('获取资金费数据完成')
+    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_funding.head(3)))
+    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_funding.tail(3)))
+
+    # 3 算因子
+    symbol_data = fetch_swap_candle_data_and_calc_factors_filters(Q.candle_mgr, symbol_list, run_time,
+                                                                  Q.bmac_expire_sec, Q.factor_calcs, Q.filter_calcs)
+    logging.info('计算所有币种K线因子完成')
+
+    # 4 打 log，将本轮计算的最新因子存储在 factor_his 文件夹下
+    output_dir = os.path.join(Q.workdir, 'factor_his')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, run_time.strftime('coin_%Y%m%d_%H%M%S.csv.zip'))
+
+    current_hour_results = [df.iloc[-1] for df in symbol_data.values()]
+    df_factor = pd.DataFrame(current_hour_results)
+    df_factor.to_csv(output_path, index=False)
+
+    df_factor.drop(columns=[
+        'open', 'high', 'low', 'close_time', 'quote_volume', 'trade_num', 'taker_buy_base_asset_volume',
+        'taker_buy_quote_asset_volume'
+    ],
+                   inplace=True)
+    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_factor.head(3)))
+
+    if Q.debug:
+        exit()
+
+
+def main(workdir):
+    # 初始化配置
+    Q = QuantConfig(workdir)
+
+    while True:
+        try:
+            while True:
+                run_loop(Q)
+        except Exception as err:
+            logging.error('系统出错, 10s之后重新运行, 出错原因: ' + str(err))
+            traceback.print_exc()
+            time.sleep(10)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])
+```
+
+## 实盘日志
+
+debug 模式，实盘运行日志
+
+```
+20230630 17:11:17 (INFO) - Next run time: 2023-06-30 17:00:00+08:00
+20230630 17:11:17 (INFO) - 获取当前周期合约完成
+20230630 17:11:17 (MyDebug) - ['BTCUSDT', 'ETHUSDT', 'BCHUSDT', 'XRPUSDT', 'EOSUSDT']
+20230630 17:11:17 (INFO) - 获取资金费数据完成
+20230630 17:11:17 (MyDebug) - 
+      symbol  fundingRate                      time
+0  SUSHIUSDT     0.000100 2023-04-29 05:00:00+08:00
+1    BTSUSDT     0.000100 2023-04-29 05:00:00+08:00
+2    INJUSDT    -0.000869 2023-04-29 05:00:00+08:00
+20230630 17:11:17 (MyDebug) - 
+          symbol  fundingRate                      time
+352895  DUSKUSDT       0.0001 2023-06-30 17:00:00+08:00
+352896  CTSIUSDT       0.0001 2023-06-30 17:00:00+08:00
+352897   ACHUSDT       0.0001 2023-06-30 17:00:00+08:00
+20230630 17:11:21 (MyDebug) - readys=187, unready=0, read=187
+20230630 17:11:21 (INFO) - 计算所有币种K线因子完成
+20230630 17:11:21 (MyDebug) - 
+             candle_begin_time     close        volume    symbol  AdaptBollingv3_bh_120  涨跌幅max_fl_24  Volume_fl_24
+1499 2023-06-30 16:00:00+08:00   0.23000  3.227302e+06   LRCUSDT               0.571843      0.018544  9.760639e+06
+1499 2023-06-30 16:00:00+08:00  97.34000  1.280859e+06   LTCUSDT               0.519714      0.076120  9.781497e+08
+1499 2023-06-30 16:00:00+08:00   0.05079  1.484064e+07  COTIUSDT               0.073205      0.015477  9.908935e+06
 ```
 
