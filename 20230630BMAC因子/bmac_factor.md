@@ -13,6 +13,56 @@ BMAC 这个共享K线框架已经发布一段时间，本文基于 BMAC，搭建
 3. 仓位：`position.py`，首先基于上一步算出的 filters，过滤出本周期可用的合约池，再基于 factors 排序，从合约池从选出需要做多和做空的合约，分配固定资金给每个合约
 4. 执行：本框架不涉及下单执行，仅做仓位记录
 
+## 配置示例
+
+### BMAC v1.1: 支持实盘资金费率获取
+
+为了使 BMAC 支持中性框架 factor 及 filter 计算，我对 BMAC 进行了小升级，使用以下配置即可实盘获取K线的同时获取资金费率
+
+```json
+{
+    "interval": "1h",
+    "http_timeout_sec": 3,
+    "candle_close_timeout_sec": 12,
+    "trade_type": "usdt_swap",
+    "funding_rate": true,
+    "dingding": {
+        "error": {
+            "access_token": "f06e5.....",
+            "secret": "SEC439...."        
+        }
+    }
+}
+```
+
+或可参考 [github](https://github.com/lostleaf/binance_market_async_crawler/blob/master/usdt_1h_alpha_example/config.json.example)
+
+### 选币配置
+
+本框架与bmac一样，通过读取工作目录下的 json 配置文件初始化程序，并每小时执行因子计算
+
+配置文件样例如下，可参考 `alpha_1h_example` 文件夹下的 json 样例文件，使用 MtmAtrMean 因子选币，backhour=120，过滤为成交量和拉黑渣币，每次开仓固定 1000 USDT
+
+```javascript
+
+{
+    "interval": "1h",  // 执行周期
+    "bmac_dir": "../usdt_1h_alpha",  // bmac 文件夹
+    "bmac_expire_sec": 30,  // bmac 超时时间（秒）
+    "factor": ["MtmAtrMean", true, 120, 0, 1],  // factor 配置，单因子
+    "filters": [["ChgPctMax", 24], ["Volume", 24]],  // filter 配置
+    "long_num": 2,  // 做多数量
+    "short_num": 8,  // 做空数量
+    "min_candle_num": 999,  // 最少K线数
+    "capital_usdt": 1000,  //  策略固定资金
+    "debug": false  // 是否启用 debug 模式，debug 模式会立即运行一次并退出，主要用于检测程序及配置的正确性
+}
+```
+
+然后执行 `python startup.py 配置所在文件夹` 即可
+
+例如可以将 `alpha_1h_example` 文件夹下 `factor_calc.json.example` 文件更名为 `factor_calc.json`，然后执行 `python startup.py alpha_1h_example`
+
 ## 代码实现
 
 ### 1. 数据
@@ -228,59 +278,36 @@ def assign_position(df_long, df_short, df_exg, capital_usdt, long_num, short_num
     return df_long, df_short
 ```
 
-## BMAC v1.1: 支持实盘资金费率获取
+### 4. 执行
 
-为了使 BMAC 支持中性框架 factor 及 filter 计算，我对 BMAC 进行了小升级，使用以下配置即可实盘获取K线的同时获取资金费率
+本框架不执行下单，只记录仓位，代码为 `save_log.py`
 
-```json
-{
-    "interval": "1h",
-    "http_timeout_sec": 3,
-    "candle_close_timeout_sec": 12,
-    "trade_type": "usdt_swap",
-    "funding_rate": true,
-    "dingding": {
-        "error": {
-            "access_token": "f06e5.....",
-            "secret": "SEC439...."        
-        }
-    }
-}
+```python
+
+def save_factor(workdir, run_time, df_factor):
+    # 记录本周期因子
+    output_dir = os.path.join(workdir, 'factor_his')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    output_path = os.path.join(output_dir, run_time.strftime('coin_%Y%m%d_%H%M%S.csv.zip'))
+    df_factor.to_csv(output_path, index=False)
+
+
+def save_selected(workdir, run_time, df_long, df_short):
+    # 记录本周期选币及仓位分配结果
+    output_dir = os.path.join(workdir, 'select_his')
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    drop_cols = [
+        'open', 'high', 'low', 'close_time', 'volume', 'trade_num', 'taker_buy_base_asset_volume',
+        'taker_buy_quote_asset_volume'
+    ]
+    long_path = os.path.join(output_dir, run_time.strftime('%Y%m%d_%H%M%S_long.csv.zip'))
+    df_long.drop(columns=drop_cols).to_csv(long_path, index=False)
+    short_path = os.path.join(output_dir, run_time.strftime('%Y%m%d_%H%M%S_short.csv.zip'))
+    df_short.drop(columns=drop_cols).to_csv(short_path, index=False)
 ```
 
-或可参考 [github](https://github.com/lostleaf/binance_market_async_crawler/blob/master/usdt_1h_alpha_example/config.json.example)
-
-## 如何使用
-
-本框架与bmac一样，通过读取工作目录下的 json 配置文件初始化程序，并每小时执行因子计算
-
-配置文件样例如下，可参考 `alpha_1h_example` 文件夹下的 json 样例文件
-
-```json
-{
-    "interval": "1h",  执行周期
-    "bmac_dir": "../usdt_1h_alpha",  bmac 文件夹
-    "bmac_expire_sec": 30,  bmac 超时时间（秒）
-    "factors": [["AdaptBollingv3", true, 120, 0, 1]],  中性 factor 配置
-    "filters": [["涨跌幅max", 24], ["Volume", 24]],  中性 filter 配置
-    "debug": false  是否启用 debug 模式，debug 模式会立即运行一次并退出，主要用于检测程序及配置的正确性
-}
-```
-
-然后执行 `python startup.py 配置所在文件夹` 即可
-
-例如可以将 `alpha_1h_example` 文件夹下 `factor_calc.json.example` 文件更名为 `factor_calc.json`，然后执行 `python startup.py alpha_1h_example`
-
-## 程序设计思路
-
-本程序每小时重复执行以下4步操作：
-
-1. 从 BMAC 加载市场信息，即当前正在交易的合约信息
-2. 从 BMAC 加载资金费率
-3. 从 BMAC 读取 K线，并计算因子
-4. 打 log，记录这一轮计算的因子，将本轮计算的最新因子存储在 factor_his 文件夹下 csv 文件中
-
-在第 4 步后，增加仓位计算模块和下单模块，则构成完整的实盘策略
 
 
 
