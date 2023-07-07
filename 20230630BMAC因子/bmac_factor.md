@@ -13,11 +13,13 @@ BMAC 这个共享K线框架已经发布一段时间，本文基于 BMAC，搭建
 3. 仓位：`position.py`，首先基于上一步算出的 filters，过滤出本周期可用的合约池，再基于 factors 排序，从合约池从选出需要做多和做空的合约，分配固定资金给每个合约
 4. 执行：本框架不涉及下单执行，仅做仓位记录
 
-## 1. 数据
+## 代码实现
+
+### 1. 数据
 
 数据包含以下两块：获取合约基本信息，和获取资金费，主要代码在 `market.py`
 
-### 加载市场信息
+#### 加载市场信息
 
 这一步非常简单，等待 BMAC 存储好市场信息并读取，返回当前正在交易的合约列表
 
@@ -35,7 +37,7 @@ def load_market(exg_mgr: CandleFeatherManager, run_time, bmac_expire_sec):
     return df_exg
 ```
 
-### 加载资金费
+#### 加载资金费
 
 这一步同样简单，等待 BMAC 存储好资金费并读取，返回当前资金费 DataFrame
 
@@ -52,11 +54,11 @@ def get_fundingrate(exg_mgr: CandleFeatherManager, run_time, expire_sec):
     return exg_mgr.read_candle('funding')
 ```
 
-## 2. 因子
+### 2. 因子
 
 因子计算代码主要在 `factor_calc.py`
 
-### 因子计算器
+#### 因子计算器
 
 首先我们定义因子计算器, 由于 factor 和 filter 参数以及命名方式有差异，因此计算器分为 factor 计算器和 filter 计算器
 
@@ -113,9 +115,9 @@ def create_filter_calc_from_alpha_config(cfg):
     return FilterCalculator(filter, params)
 ```
 
-### 因子计算调用
+#### 因子计算调用
 
-接着定义 `fetch_swap_candle_data_and_calc_factors_filters` 函数，从 BMAC 读取K线数据并计算因子
+接着定义 `fetch_swap_candle_data_and_calc_factors_filters` 函数，从 BMAC 读取K线数据并计算因子，并返回当前周期最新的因子
 
 其中使用了忙等待这种高频常用技巧，因为 BMAC 为 IO 密集型程序，其中大量时间被用于等待 http 请求，并且各合约K线就绪时间不一，而算因子属于 CPU 密集型程序，使用该技巧能更好地利用 CPU，在等待未就绪K线的同时计算已就绪K线合约因子，降低整体延时
 
@@ -158,13 +160,73 @@ def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherMan
     return df_factor
 ```
 
-## 3. 仓位
+### 3. 仓位
 
 仓位模块涉及过滤、选币、以及资金分配，代码为 `position.py`
 
-### 过滤
+#### 过滤
 
-过滤包含两个部分，一是
+过滤包含两个部分，一是过滤无效因子(inf 和 nan)，二是根据 filter 因子选出可用合约池，目前直接硬编码了 F 神框架中的过滤渣币和交易量
+
+```python
+
+def filiter_nan_inf(df_factor, factor_filter_cols):
+    # 过滤 nan 及 inf
+    with pd.option_context('mode.use_inf_as_na', True):  
+        return df_factor[~df_factor[factor_filter_cols].isna().any(axis=1)]
+
+def filter_before(df1: pd.DataFrame):
+    long_condition1 = df1['ChgPctMax_fl_24'].between(-1e+100, 0.2, inclusive='both')
+    df1 = df1.loc[long_condition1]
+
+    df1[f'Volume_fl_24_rank'] = df1.groupby('candle_begin_time')['Volume_fl_24'].rank(method='first',
+                                                                                      pct=False,
+                                                                                      ascending=False)
+    long_condition2 = df1[f'Volume_fl_24_rank'].between(-1e+100, 60, inclusive='both')
+    df1 = df1.loc[long_condition2]
+
+    return df1
+```
+
+#### 选币
+
+对于过滤过的合约池，直接根据单因子排序，并对首尾合约做空/做多
+
+```python
+
+def select_coin(df_factor: pd.DataFrame, factor_name, ascending, long_num, short_num):
+    df_factor = df_factor.sort_values(factor_name, ascending=ascending, ignore_index=True)
+    df_short = df_factor.head(short_num).copy()
+    df_long = df_factor.tail(long_num).copy()
+
+    return df_long, df_short
+```
+
+#### 资金分配
+
+基于配置中的固定资金，一半分配给多头，一半分配给空头，空头/多头均仓分配给选出的合约
+
+每个合约根据收盘价和分配的资金，计算仓位，并根据交易规则舍入仓位至指定精度
+
+```python
+
+def assign_position(df_long, df_short, df_exg, capital_usdt, long_num, short_num):
+
+    def pos(capital, close, face_value):
+        return round_to_tick(Decimal(capital / close), face_value)
+
+    long_coin_capital = capital_usdt / 2 / long_num
+    df_long['position'] = df_long.apply(
+        lambda r: pos(long_coin_capital, r['close'], df_exg.at[r['symbol'], 'face_value']), axis=1)
+    df_long['pos_val'] = df_long['position'].astype(float) * df_long['close']
+
+    short_coin_capital = capital_usdt / 2 / short_num
+    df_short['position'] = df_short.apply(
+        lambda r: pos(short_coin_capital, r['close'], df_exg.at[r['symbol'], 'face_value']), axis=1)
+    df_short['pos_val'] = df_short['position'].astype(float) * df_short['close']
+
+    return df_long, df_short
+```
 
 ## BMAC v1.1: 支持实盘资金费率获取
 
