@@ -63,6 +63,42 @@ BMAC 这个共享K线框架已经发布一段时间，本文基于 BMAC，搭建
 
 例如可以将 `alpha_1h_example` 文件夹下 `factor_calc.json.example` 文件更名为 `factor_calc.json`，然后执行 `python startup.py alpha_1h_example`
 
+以上配置被 `config.py` 中的 `QuantConfig` 类解析，形成实盘配置，代码如下
+
+```python
+
+class QuantConfig:
+
+    def __init__(self, workdir):
+        self.workdir = workdir
+
+        cfg_path = os.path.join(workdir, 'factor_calc.json')
+        cfg = json.load(open(cfg_path, 'r'))
+
+        self.interval = cfg['interval']
+
+        self.bmac_dir = cfg['bmac_dir']
+        self.bmac_expire_sec = cfg['bmac_expire_sec']
+
+        self.long_num = cfg['long_num']
+        self.short_num = cfg['short_num']
+
+        self.min_candle_num = cfg['min_candle_num']
+
+        self.capital_usdt = cfg['capital_usdt']
+
+        self.exg_mgr = CandleFeatherManager(os.path.join(self.bmac_dir, f'exginfo_{self.interval}'))
+        self.candle_mgr = CandleFeatherManager(os.path.join(self.bmac_dir, f'usdt_swap_{self.interval}'))
+
+        self.factor_cfg = cfg['factor']
+        self.filter_cfgs = cfg['filters']
+
+        self.debug = cfg.get('debug', False)
+
+        self.factor_calcs = [create_factor_calc_from_alpha_config(self.factor_cfg)]
+        self.filter_calcs = [create_filter_calc_from_alpha_config(cfg) for cfg in self.filter_cfgs]
+```
+
 ## 代码实现
 
 ### 1. 数据
@@ -378,26 +414,47 @@ def run_loop(Q: QuantConfig):
 debug 模式，实盘运行日志
 
 ```
-20230630 17:11:17 (INFO) - Next run time: 2023-06-30 17:00:00+08:00
-20230630 17:11:17 (INFO) - 获取当前周期合约完成
-20230630 17:11:17 (MyDebug) - ['BTCUSDT', 'ETHUSDT', 'BCHUSDT', 'XRPUSDT', 'EOSUSDT']
-20230630 17:11:17 (INFO) - 获取资金费数据完成
-20230630 17:11:17 (MyDebug) - 
-      symbol  fundingRate                      time
-0  SUSHIUSDT     0.000100 2023-04-29 05:00:00+08:00
-1    BTSUSDT     0.000100 2023-04-29 05:00:00+08:00
-2    INJUSDT    -0.000869 2023-04-29 05:00:00+08:00
-20230630 17:11:17 (MyDebug) - 
+20230707 13:02:50 (INFO) - Next run time: 2023-07-07 13:00:00+08:00
+20230707 13:02:50 (INFO) - 获取当前周期合约完成
+20230707 13:02:50 (MyDebug) -
+        contract_type   status base_asset quote_asset margin_asset price_tick face_value min_notional_value
+symbol
+BTCUSDT     PERPETUAL  TRADING        BTC        USDT         USDT  0.1000000      0.001                5.0
+ETHUSDT     PERPETUAL  TRADING        ETH        USDT         USDT  0.0100000      0.001                5.0
+20230707 13:02:50 (INFO) - 获取资金费数据完成
+20230707 13:02:50 (MyDebug) -
           symbol  fundingRate                      time
-352895  DUSKUSDT       0.0001 2023-06-30 17:00:00+08:00
-352896  CTSIUSDT       0.0001 2023-06-30 17:00:00+08:00
-352897   ACHUSDT       0.0001 2023-06-30 17:00:00+08:00
-20230630 17:11:21 (MyDebug) - readys=187, unready=0, read=187
-20230630 17:11:21 (INFO) - 计算所有币种K线因子完成
-20230630 17:11:21 (MyDebug) - 
-             candle_begin_time     close        volume    symbol  AdaptBollingv3_bh_120  涨跌幅max_fl_24  Volume_fl_24
-1499 2023-06-30 16:00:00+08:00   0.23000  3.227302e+06   LRCUSDT               0.571843      0.018544  9.760639e+06
-1499 2023-06-30 16:00:00+08:00  97.34000  1.280859e+06   LTCUSDT               0.519714      0.076120  9.781497e+08
-1499 2023-06-30 16:00:00+08:00   0.05079  1.484064e+07  COTIUSDT               0.073205      0.015477  9.908935e+06
+354659  DUSKUSDT     0.000100 2023-07-07 13:00:00+08:00
+354660  CTSIUSDT     0.000100 2023-07-07 13:00:00+08:00
+354661   ACHUSDT    -0.000003 2023-07-07 13:00:00+08:00
+20230707 13:02:51 (MyDebug) - readys=189, unready=0, read=184
+20230707 13:02:51 (INFO) - 计算所有币种K线因子完成
+20230707 13:02:51 (MyDebug) -
+          contract_type   status base_asset quote_asset margin_asset price_tick face_value min_notional_value
+symbol
+COMPUSDT      PERPETUAL  TRADING       COMP        USDT         USDT  0.0100000      0.001                5.0
+STORJUSDT     PERPETUAL  TRADING      STORJ        USDT         USDT  0.0001000      1.000                5.0
+TOMOUSDT      PERPETUAL  TRADING       TOMO        USDT         USDT  0.0001000      1.000                5.0
+CFXUSDT       PERPETUAL  TRADING        CFX        USDT         USDT  0.0001000      1.000                5.0
+LINAUSDT      PERPETUAL  TRADING       LINA        USDT         USDT  0.0000100      1.000                5.0
+APEUSDT       PERPETUAL  TRADING        APE        USDT         USDT  0.0010000      1.000                5.0
+WAVESUSDT     PERPETUAL  TRADING      WAVES        USDT         USDT  0.0001000      0.100                5.0
+ARBUSDT       PERPETUAL  TRADING        ARB        USDT         USDT  0.0001000      0.100                5.0
+SUIUSDT       PERPETUAL  TRADING        SUI        USDT         USDT  0.0001000      0.100                5.0
+DYDXUSDT      PERPETUAL  TRADING       DYDX        USDT         USDT  0.0010000      0.100                5.0
+20230707 13:02:51 (MyDebug) - Short
+          candle_begin_time    close  quote_volume     symbol  MtmAtrMean_bh_120  ChgPctMax_fl_24  Volume_fl_24  Volume_fl_24_rank  position   pos_val
+0 2023-07-07 12:00:00+08:00  0.99370  4.204179e+06   TOMOUSDT          -0.003967         0.020359  2.440979e+08               22.0    63.000  62.60310
+1 2023-07-07 12:00:00+08:00  0.18650  3.429941e+06    CFXUSDT          -0.000906         0.017037  2.038793e+08               28.0   335.000  62.47750
+2 2023-07-07 12:00:00+08:00  0.01275  2.749183e+06   LINAUSDT          -0.000884         0.015849  1.364932e+08               36.0  4902.000  62.50050
+3 2023-07-07 12:00:00+08:00  1.88600  1.013592e+07    APEUSDT          -0.000744         0.010947  2.291725e+08               26.0    33.000  62.23800
+4 2023-07-07 12:00:00+08:00  2.00960  1.526337e+07  WAVESUSDT          -0.000523         0.027062  7.312579e+08                7.0    31.100  62.49856
+5 2023-07-07 12:00:00+08:00  1.09280  1.089748e+07    ARBUSDT          -0.000185         0.012185  3.229089e+08               18.0    57.200  62.50816
+6 2023-07-07 12:00:00+08:00  0.64740  8.264401e+06    SUIUSDT          -0.000115         0.032109  2.315658e+08               24.0    96.500  62.47410
+7 2023-07-07 12:00:00+08:00  1.83300  2.960683e+06   DYDXUSDT          -0.000064         0.019190  1.237705e+08               38.0    34.100  62.50530
+20230707 13:02:51 (MyDebug) - Long
+           candle_begin_time   close  quote_volume     symbol  MtmAtrMean_bh_120  ChgPctMax_fl_24  Volume_fl_24  Volume_fl_24_rank position    pos_val
+58 2023-07-07 12:00:00+08:00  57.650  7.157293e+06   COMPUSDT           0.007961         0.026467  3.368932e+08               14.0    4.337  250.02805
+59 2023-07-07 12:00:00+08:00   0.374  1.878021e+07  STORJUSDT           0.009874         0.028886  4.075795e+08               12.0  668.000  249.83200
 ```
 
