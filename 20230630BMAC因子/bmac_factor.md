@@ -1,6 +1,170 @@
-# 基于 BMAC 的实盘中性因子计算框架
+# 基于 BMAC 的中性选币框架（只选币不下单）
 
-BMAC 这个共享K线框架已经发布一段时间，本文主要介绍一个基于 BMAC 的实盘中性因子计算框架
+BMAC 这个共享K线框架已经发布一段时间，本文基于 BMAC，搭建一个单因子，HH=1，固定资金的中性选币框架，不包含下单模块
+
+## 实盘交易的软件工程
+
+在进入代码之前，我们先来从软件工程的角度，谈谈量化交易实盘系统的软件架构
+
+我认为绝大部分的交易策略，实盘系统可大致分为四个模块：**数据**, **因子**, **仓位**, **执行**
+
+1. 数据：`market.py`，从 BMAC 等待并读取本周期交易的合约基本信息（包括合约名称，最小下单量等），以及资金费率
+2. 因子：`factor_calc.py`，等待 BMAC 获取 K线数据，并计算本周期 factors 和 filters
+3. 仓位：`position.py`，首先基于上一步算出的 filters，过滤出本周期可用的合约池，再基于 factors 排序，从合约池从选出需要做多和做空的合约，分配固定资金给每个合约
+4. 执行：本框架不涉及下单执行，仅做仓位记录
+
+## 1. 数据
+
+数据包含以下两块：获取合约基本信息，和获取资金费，主要代码在 `market.py`
+
+### 加载市场信息
+
+这一步非常简单，等待 BMAC 存储好市场信息并读取，返回当前正在交易的合约列表
+
+```python
+
+def load_market(exg_mgr: CandleFeatherManager, run_time, bmac_expire_sec):
+    # 从 BMAC 读取合约列表
+    expire_time = run_time + timedelta(seconds=bmac_expire_sec)
+    is_ready = wait_until_ready(exg_mgr, 'exginfo', run_time, expire_time)
+
+    if not is_ready:
+        raise RuntimeError(f'exginfo not ready at {now_time()}')
+
+    df_exg: pd.DataFrame = exg_mgr.read_candle('exginfo')
+    return df_exg
+```
+
+### 加载资金费
+
+这一步同样简单，等待 BMAC 存储好资金费并读取，返回当前资金费 DataFrame
+
+```python
+
+def get_fundingrate(exg_mgr: CandleFeatherManager, run_time, expire_sec):
+    # 从 BMAC 读取资金费
+    expire_time = run_time + timedelta(seconds=expire_sec)
+    is_ready = wait_until_ready(exg_mgr, 'funding', run_time, expire_time)
+
+    if not is_ready:
+        raise RuntimeError(f'Funding rate not ready')
+
+    return exg_mgr.read_candle('funding')
+```
+
+## 2. 因子
+
+因子计算代码主要在 `factor_calc.py`
+
+### 因子计算器
+
+首先我们定义因子计算器, 由于 factor 和 filter 参数以及命名方式有差异，因此计算器分为 factor 计算器和 filter 计算器
+
+两个工厂函数 `create_XXX_calc_from_alpha_config` 中的参数 `cfg`，均对应中性实盘配置
+
+```python
+
+import importlib
+
+import pandas as pd
+
+# factor 计算器
+class FactorCalculator:
+
+    def __init__(self, factor, back_hour, d_num):
+        self.backhour = int(back_hour)
+        self.d_num = d_num
+
+        factor_module_name = f'factors.{factor}'
+        module = importlib.import_module(factor_module_name)
+        self.signal_func = module.signal
+
+        if d_num == 0:
+            self.factor_name = f'{factor}_bh_{back_hour}'
+        else:
+            self.factor_name = f'{factor}_bh_{back_hour}_diff_{d_num}'
+
+    def calc(self, df: pd.DataFrame):
+        return self.signal_func(df, self.backhour, self.d_num, self.factor_name)
+
+
+# filter 计算器
+class FilterCalculator:
+
+    def __init__(self, filter, params):
+        self.filter_name = f'{filter}_fl_{params}'
+        self.params = params
+
+        filter_module_name = f'filters.{filter}'
+        module = importlib.import_module(filter_module_name)
+        self.signal_func = module.signal
+
+    def calc(self, df: pd.DataFrame):
+        return self.signal_func(df, self.params, self.filter_name)
+
+
+def create_factor_calc_from_alpha_config(cfg):
+    factor, if_reverse, back_hour, d_num, weight = cfg
+    return FactorCalculator(factor, back_hour, d_num)
+
+
+def create_filter_calc_from_alpha_config(cfg):
+    filter, params = cfg
+    return FilterCalculator(filter, params)
+```
+
+### 因子计算调用
+
+接着定义 `fetch_swap_candle_data_and_calc_factors_filters` 函数，从 BMAC 读取K线数据并计算因子
+
+其中使用了忙等待这种高频常用技巧，因为 BMAC 为 IO 密集型程序，其中大量时间被用于等待 http 请求，并且各合约K线就绪时间不一，而算因子属于 CPU 密集型程序，使用该技巧能更好地利用 CPU，在等待未就绪K线的同时计算已就绪K线合约因子，降低整体延时
+
+在计算因子时，会略过上市时间不足的合约（ K线数量 < 999）
+
+```python
+
+def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherManager, symbol_list, run_time, expire_sec,
+                                                    factor_calcs, filter_calcs, min_candle_num):
+    unready_symbols = set(symbol_list)
+    expire_time = run_time + timedelta(seconds=expire_sec)
+    symbol_data = dict()
+
+    # 算因子（忙等待）
+    while True:
+        while len(unready_symbols) > 0:
+            readies = {s for s in unready_symbols if candle_mgr.check_ready(s, run_time)}
+            if len(readies) == 0:
+                break
+            for sym in readies:
+                df = candle_mgr.read_candle(sym)
+                if len(df) < min_candle_num:
+                    continue
+                df['symbol'] = sym
+                for factor_calc in factor_calcs:
+                    factor_calc.calc(df)
+                for filter_calc in filter_calcs:
+                    filter_calc.calc(df)
+                symbol_data[sym] = df
+            unready_symbols -= readies
+            logging.log(MY_DEBUG_LEVEL, 'readys=%d, unready=%d, read=%d', len(readies), len(unready_symbols),
+                        len(symbol_data))
+        if len(unready_symbols) == 0:
+            break
+        if now_time() > expire_time:
+            break
+        time.sleep(0.01)
+    current_hour_results = [df.iloc[-1] for df in symbol_data.values()]
+    df_factor = pd.DataFrame(current_hour_results).reset_index(drop=True)
+    return df_factor
+```
+
+## 3. 仓位
+
+仓位模块涉及过滤、选币、以及资金分配，代码为 `position.py`
+
+### 过滤
+
+过滤包含两个部分，一是
 
 ## BMAC v1.1: 支持实盘资金费率获取
 
@@ -56,139 +220,9 @@ BMAC 这个共享K线框架已经发布一段时间，本文主要介绍一个�
 
 在第 4 步后，增加仓位计算模块和下单模块，则构成完整的实盘策略
 
-## 加载市场信息
-
-这一步非常简单，等待 BMAC 存储好市场信息并读取，返回当前正在交易的合约列表
-
-```python
-# market.py
-
-def load_market(exg_mgr: CandleFeatherManager, run_time, bmac_expire_sec):
-    # 从 BMAC 读取合约列表
-    expire_time = run_time + timedelta(seconds=bmac_expire_sec)
-    is_ready = wait_until_ready(exg_mgr, 'exginfo', run_time, expire_time)
-
-    if not is_ready:
-        raise RuntimeError(f'exginfo not ready at {now_time()}')
-
-    df_exg: pd.DataFrame = exg_mgr.read_candle('exginfo')
-    symbol_list = list(df_exg['symbol'])
-    return symbol_list
-```
-
-## 加载资金费
-
-这一步同样简单，等待 BMAC 存储好资金费并读取，返回当前资金费 DataFrame
-
-```python
-# market.py
-
-def get_fundingrate(exg_mgr: CandleFeatherManager, run_time, expire_sec):
-    # 从 BMAC 读取资金费
-    expire_time = run_time + timedelta(seconds=expire_sec)
-    is_ready = wait_until_ready(exg_mgr, 'funding', run_time, expire_time)
-
-    if not is_ready:
-        raise RuntimeError(f'Funding rate not ready')
-
-    return exg_mgr.read_candle('funding')
-```
-
-## 计算因子
-
-首先我们定义因子计算器, 由于 factor 和 filter 参数以及命名方式有差异，因此计算器分为 factor 计算器和 filter 计算器
-
-两个工厂函数 `create_XXX_calc_from_alpha_config` 中的参数 `cfg`，均对应中性实盘配置
-
-```python
-# calculator.py
-
-import importlib
-
-import pandas as pd
-
-# factor 计算器
-class FactorCalculator:
-
-    def __init__(self, factor, back_hour, d_num):
-        self.backhour = int(back_hour)
-        self.d_num = d_num
-
-        factor_module_name = f'factors.{factor}'
-        module = importlib.import_module(factor_module_name)
-        self.signal_func = module.signal
-
-        if d_num == 0:
-            self.factor_name = f'{factor}_bh_{back_hour}'
-        else:
-            self.factor_name = f'{factor}_bh_{back_hour}_diff_{d_num}'
-
-    def calc(self, df: pd.DataFrame):
-        return self.signal_func(df, self.backhour, self.d_num, self.factor_name)
 
 
-# filter 计算器
-class FilterCalculator:
 
-    def __init__(self, filter, params):
-        self.filter_name = f'{filter}_fl_{params}'
-        self.params = params
-
-        filter_module_name = f'filters.{filter}'
-        module = importlib.import_module(filter_module_name)
-        self.signal_func = module.signal
-
-    def calc(self, df: pd.DataFrame):
-        return self.signal_func(df, self.params, self.filter_name)
-
-
-def create_factor_calc_from_alpha_config(cfg):
-    factor, if_reverse, back_hour, d_num, weight = cfg
-    return FactorCalculator(factor, back_hour, d_num)
-
-
-def create_filter_calc_from_alpha_config(cfg):
-    filter, params = cfg
-    return FilterCalculator(filter, params)
-```
-
-接着定义 `fetch_swap_candle_data_and_calc_factors_filters` 函数，从 BMAC 读取K线数据并计算因子
-
-其中使用了忙等待这种高频常用技巧，因为 BMAC 为 IO 密集型程序，其中大量时间被用于等待 http 请求，并且各合约K线就绪时间不一，而算因子属于 CPU 密集型程序，使用该技巧能更好地利用 CPU，在等待未就绪K线的同时计算已就绪K线合约因子，降低整体延时
-
-```python
-# calc.py
-
-def fetch_swap_candle_data_and_calc_factors_filters(candle_mgr: CandleFeatherManager, symbol_list, run_time, expire_sec,
-                                                    factor_calcs, filter_calcs):
-    unready_symbols = set(symbol_list)
-    expire_time = run_time + timedelta(seconds=expire_sec)
-    symbol_data = dict()
-
-    # 算因子（忙等待）
-    while True:
-        while len(unready_symbols) > 0:
-            readies = {s for s in unready_symbols if candle_mgr.check_ready(s, run_time)}
-            if len(readies) == 0:
-                break
-            for sym in readies:
-                df = candle_mgr.read_candle(sym)
-                df['symbol'] = sym
-                for factor_calc in factor_calcs:
-                    factor_calc.calc(df)
-                for filter_calc in filter_calcs:
-                    filter_calc.calc(df)
-                symbol_data[sym] = df
-            unready_symbols -= readies
-            logging.log(MY_DEBUG_LEVEL, 'readys=%d, unready=%d, read=%d', len(readies), len(unready_symbols),
-                        len(symbol_data))
-        if len(unready_symbols) == 0:
-            break
-        if now_time() > expire_time:
-            break
-        time.sleep(0.01)
-    return symbol_data
-```
 
 ## 主程序
 
