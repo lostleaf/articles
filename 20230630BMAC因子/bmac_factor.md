@@ -308,39 +308,13 @@ def save_selected(workdir, run_time, df_long, df_short):
     df_short.drop(columns=drop_cols).to_csv(short_path, index=False)
 ```
 
+### 主程序
 
+主程序本质上为一个大 loop，每小时运行以上四个步骤，出错重试，代码为 `startup.py`
 
-
-
-
-## 主程序
-
-主程序本质上为一个大 loop，每小时运行以上四个步骤，出错重试
+核心代码如下
 
 ```python
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-import logging
-import os
-import sys
-import time
-import traceback
-from datetime import timedelta
-
-import pandas as pd
-
-from config import QuantConfig
-from market import get_fundingrate, load_market
-from utils.commons import (MY_DEBUG_LEVEL, next_run_time, sleep_until_run_time)
-from calc import fetch_swap_candle_data_and_calc_factors_filters
-
-sys.stdout.reconfigure(encoding='utf-8')
-
-# 调试用，实盘可删除参数 level=MY_DEBUG_LEVEL
-logging.addLevelName(MY_DEBUG_LEVEL, 'MyDebug')
-logging.basicConfig(format='%(asctime)s (%(levelname)s) - %(message)s', level=MY_DEBUG_LEVEL, datefmt='%Y%m%d %H:%M:%S')
-
 
 def run_loop(Q: QuantConfig):
     run_time = next_run_time('1h')
@@ -352,58 +326,51 @@ def run_loop(Q: QuantConfig):
     sleep_until_run_time(run_time)
 
     # 1 加载市场信息
-    symbol_list = load_market(Q.exg_mgr, run_time, Q.bmac_expire_sec)
+    df_exg = load_market(Q.exg_mgr, run_time, Q.bmac_expire_sec)
+    symbol_list = list(df_exg['symbol'])
+    df_exg.set_index('symbol', inplace=True)
+
     logging.info('获取当前周期合约完成')
-    logging.log(MY_DEBUG_LEVEL, symbol_list[:5])
+    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_exg.head(2)))
 
     # 2 获取当前资金费率
     df_funding = get_fundingrate(Q.exg_mgr, run_time, Q.bmac_expire_sec)
     logging.info('获取资金费数据完成')
-    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_funding.head(3)))
     logging.log(MY_DEBUG_LEVEL, '\n' + str(df_funding.tail(3)))
 
     # 3 算因子
-    symbol_data = fetch_swap_candle_data_and_calc_factors_filters(Q.candle_mgr, symbol_list, run_time,
-                                                                  Q.bmac_expire_sec, Q.factor_calcs, Q.filter_calcs)
+    df_factor = fetch_swap_candle_data_and_calc_factors_filters(Q.candle_mgr, symbol_list, run_time, Q.bmac_expire_sec,
+                                                                Q.factor_calcs, Q.filter_calcs, Q.min_candle_num)
+
     logging.info('计算所有币种K线因子完成')
+    df_factor_all = df_factor.copy()
 
-    # 4 打 log，将本轮计算的最新因子存储在 factor_his 文件夹下
-    output_dir = os.path.join(Q.workdir, 'factor_his')
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    output_path = os.path.join(output_dir, run_time.strftime('coin_%Y%m%d_%H%M%S.csv.zip'))
+    # 4 过滤
+    factor_filter_cols = [c.factor_name for c in Q.factor_calcs] + [c.filter_name for c in Q.filter_calcs]
+    df_factor = filiter_nan_inf(df_factor, factor_filter_cols)
+    df_factor = filter_before(df_factor)  # 前置过滤
 
-    current_hour_results = [df.iloc[-1] for df in symbol_data.values()]
-    df_factor = pd.DataFrame(current_hour_results)
-    df_factor.to_csv(output_path, index=False)
+    # 5 选币
+    df_long, df_short = select_coin(df_factor, Q.factor_calcs[0].factor_name, Q.factor_cfg[1], Q.long_num, Q.short_num)
 
-    df_factor.drop(columns=[
-        'open', 'high', 'low', 'close_time', 'quote_volume', 'trade_num', 'taker_buy_base_asset_volume',
+    # 6 分配仓位
+    df_long, df_short = assign_position(df_long, df_short, df_exg, Q.capital_usdt, Q.long_num, Q.short_num)
+
+    # 7 记录因子和选币结果
+    save_selected(Q.workdir, run_time, df_long, df_short)  # 将本轮最新选币存储在 select_his 文件夹下
+    save_factor(Q.workdir, run_time, df_factor_all)  # 将本轮计算的最新因子存储在 factor_his 文件夹下
+
+    drop_cols = [
+        'open', 'high', 'low', 'close_time', 'volume', 'trade_num', 'taker_buy_base_asset_volume',
         'taker_buy_quote_asset_volume'
-    ],
-                   inplace=True)
-    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_factor.head(3)))
+    ]
+    logging.log(MY_DEBUG_LEVEL, '\n' + str(df_exg.loc[list(df_long['symbol']) + list(df_short['symbol'])]))
+
+    logging.log(MY_DEBUG_LEVEL, 'Short\n' + str(df_short.drop(columns=drop_cols)))
+    logging.log(MY_DEBUG_LEVEL, 'Long\n' + str(df_long.drop(columns=drop_cols)))
 
     if Q.debug:
         exit()
-
-
-def main(workdir):
-    # 初始化配置
-    Q = QuantConfig(workdir)
-
-    while True:
-        try:
-            while True:
-                run_loop(Q)
-        except Exception as err:
-            logging.error('系统出错, 10s之后重新运行, 出错原因: ' + str(err))
-            traceback.print_exc()
-            time.sleep(10)
-
-
-if __name__ == '__main__':
-    main(sys.argv[1])
 ```
 
 ## 实盘日志
