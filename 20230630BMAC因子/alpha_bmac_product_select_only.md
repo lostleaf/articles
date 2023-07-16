@@ -1,3 +1,5 @@
+[Github](https://github.com/lostleaf/alpha_bmac_product_select_only)
+
 # 基于 BMAC 的中性选币框架（只选币不下单）
 
 BMAC 这个共享K线框架已经发布一段时间，本文基于 BMAC，搭建一个单因子，HH=1，固定资金的中性选币框架，不包含下单模块
