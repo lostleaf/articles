@@ -6,7 +6,7 @@ AROON 是一个常见的技术指标，其定义可以参考 [Investopedia](http
 
 优化该因子的计算是一个有趣的问题
 
-代码可以参考 [Github](https://github.com/lostleaf/articles/blob/master/20221013%E4%BD%BF%E7%94%A8numba%E5%92%8C%E5%8D%95%E8%B0%83%E9%98%9F%E5%88%97%E5%B0%86AROON%E5%9B%A0%E5%AD%90%E6%8F%90%E9%80%9F1500%E5%80%8D/optimize_aroon.ipynb)
+代码可以参考 [Github](https://github.com/lostleaf/articles/blob/master/20221013numba_aroon/optimize_aroon.ipynb)
 
 ## 数据与参数
 
