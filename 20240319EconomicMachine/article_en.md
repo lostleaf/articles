@@ -60,7 +60,7 @@ Here is an analysis framework that may not perfectly align with traditional econ
 
 - Transactions completed with money are settled immediately.
 - Transactions completed with credit, such as buying on credit, create liabilities and assets, and are only concluded once the debt is repaid, with liabilities and assets disappearing simultaneously.
-- In reality, most money is actually credit. For example, in the United States, the total credit is approximately $50 trillion, while the total money supply (M0, M1, M2) is about $3 trillion.
+- In reality, most money is actually credit. For example, in the United States, the total credit is approximately $50 trillion, while the total money supply is about $3 trillion.
 - In a credit system, increasing credit can boost income growth in the short term, but not necessarily in the long term.
 - Credit is not inherently bad, but it does cause cyclical changes in the economy:
   - Bad credit: Credit leads to consumption that exceeds the ability to repay.
