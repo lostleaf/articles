@@ -1,115 +1,115 @@
-# 经济机器是如何运行的
+# How the Economic Machine Works
 
-经济运作如同一个简易的机械装置。然而，许多人不理解或不同意这一观点，导致了不必要的经济损失。
+The economy operates like a simple machine, yet many people are unaware or disagree with this perspective, leading to unnecessary economic losses.
 
-以下是一种虽不完全符合传统经济学，但实用性强的分析框架：
+Here is an analysis framework that may not perfectly align with traditional economics but is highly useful:
 
-- 虽看似复杂，经济却以一种基础且机械的方式运作。
-- 经济由若干基本构件和无数简单交易组成，这些交易受到人性的推动。
-- 三大主要经济动力：
-    1. 生产力增长
-    2. 短期债务周期
-    3. 长期债务周期  
+- The economy appears complex but functions in a straightforward and mechanical way.
+- It is composed of a few simple parts and countless simple transactions, driven by human nature.
+- Three main economic forces:
+    1. Productivity growth
+    2. Short-term debt cycle
+    3. Long-term debt cycle  
 
-## 交易
+## Transactions
 
-- 一次买卖双方的互换行为称为一笔交易，交易在每时每刻都在进行。
-- 经济是由无数交易汇聚而成的总和。
-- 在每笔交易中：**买方**支付货币或信用，以换取**卖方**提供的商品、服务或金融资产。
-    - 买方支付的货币与信用总和称为支出总额，支出总额是推动经济的关键因素，即 `支出总额 = 货币 + 信用`。
-    - 支出总额除以卖方的产品销量，得到商品价格，即 `价格 = 支出总额 / 产品销量`。
-- 交易是构成经济机器的基础零件，所有经济周期和动力都由交易引起；因此，理解交易就等于理解了经济。
+- An exchange between a buyer and a seller is called a transaction, which occurs constantly.
+- The economy is the sum total of numerous transactions.
+- In each transaction: **Buyers** pay money or credit to obtain goods, services, or financial assets from **sellers**.
+    - The sum of money and credit paid by the buyer is the total spending, which is the driving force of the economy, i.e., `Total Spending = Money + Credit`.
+    - Dividing the total spending by the seller's product sales volume gives the price, i.e., `Price = Total Spending / Sales Volume`.
+- Transactions are the fundamental components of the economic machine; all economic cycles and forces are caused by transactions. Thus, understanding transactions is to understand the economy.
 
-## 市场
+## Markets
 
-- 市场由交易相同商品的卖方和买方组成，如小麦市场、汽车市场、股票市场等。
-- 经济由所有市场中的交易集合构成，将所有市场的总支出和销量相加，可以得到了解整个经济的关键信息。
-- 个人、公司、银行和政府都参与交易。
-- 政府是最大的卖方和买方，由中央政府和中央银行组成：
-  - 中央政府：负责征税和开支。
-  - 中央银行：与其他买卖方不同，中央银行通过影响利率和发行货币来调控经济中的货币和信贷数量，在信贷流通中扮演关键角色。
+- A market consists of sellers and buyers trading the same type of goods, such as wheat markets, car markets, stock markets, etc.
+- The economy is made up of all transactions within all markets. Adding up all the markets' total spending and sales volumes gives us all the information needed to understand the economy.
+- Individuals, companies, banks, and governments all engage in transactions.
+- The government is the largest seller and buyer, consisting of the central government and the central bank:
+  - Central government: Responsible for taxation and spending.
+  - Central bank: Unlike other buyers and sellers, the central bank controls the amount of money and credit in the economy by influencing interest rates and issuing currency, playing a crucial role in the circulation of credit.
 
-## 信贷
+## Credit
 
-- 信贷是经济体系中最重要、最具变化性的一部分。
-- 信贷的参与者包括借款人和贷款人：
-  - 贷款人：期望资金增值，将资金借给借款人。
-  - 借款人：希望购买目前无力支付的物品，向贷款人借款，并在未来支付本金加利息。
-- 利率对借贷活动的影响显著：高利率意味着更多的利息支出，从而减少借款；低利率则使得人们因为较少的利息支付而更愿意借款。
-- 只要借款人有能力偿还债务，贷款人信任他们的承诺，信贷便会产生；因此，任何两人之间都能创造信贷。
-- 信贷的产生伴随着债务的产生，债务是贷款人的资产同时也是借款人的负债。当贷款被偿还时，这些资产和负债会同时消失。
-- 借款人的信誉包含两个方面：
-  - 收入与债务的比例较高，显示出良好的偿债能力。
-  - 能够提供充足的抵押物，在无法偿还时用以清偿债务。
-- 信贷的重要作用：当借款人获取信贷时，他们可以增加支出，进而增加他人的收入；收入的增加又能够促使更多的借款和信贷的产生，使得经济上升。但这也是**经济周期**形成的原因。
+- Credit is the most important and most volatile part of the economy.
+- Participants in credit include borrowers and lenders:
+  - Lenders: Desire to earn interest on their money by lending it to borrowers.
+  - Borrowers: Wish to purchase something they currently cannot afford and borrow money from lenders, repaying the principal and interest at a later date.
+- The impact of interest rates on borrowing: High interest rates mean more interest to pay, reducing borrowing; low interest rates encourage borrowing due to lower interest expenses.
+- As long as borrowers can assure repayment and lenders trust their promise, credit is created; thus, any two people can create credit out of thin air.
+- Debt comes with the creation of credit; it is an asset to the lender and a liability to the borrower. When the loan is repaid, these assets and liabilities disappear simultaneously.
+- A borrower's creditworthiness includes two aspects:
+  - A higher ratio of income to debt indicates good repayment capacity.
+  - Sufficient collateral that can be used to repay the debt if unable to pay back in cash.
+- The significance of credit: When borrowers obtain credit, they can increase spending, which in turn increases someone else's income; the increase in income can lead to more borrowing and credit, causing the economy to rise, but also leading to **economic cycles**.
 
-## 周期
+## Cycles
 
-- 长远来看，生产率的提升带来了收入的增长，但生产率的提升通常变动平缓，并非短期经济波动的主要驱动力。
-- 短期内，信贷起着至关重要的作用，因为借贷会导致消费超过产出，还贷时消费又会降低至产出以下。
-- 债务量的波动存在两个主要周期：
-  - 短期债务周期：通常持续5至8年。
-  - 长期债务周期：通常持续75至100年。
-- 经济的涨落主要取决于信贷总量。如果没有信贷，经济将仅随生产率增长而增长。
-- 由于信贷的存在，经济呈现周期性波动，这是由人性所决定的。
-- 适用于个人和整体经济的周期模式：
-  - 当前通过借债实现超出收入的消费。
-  - 未来必须减少消费以偿还债务。
+- Over the long term, productivity improvements lead to income growth, but productivity does not fluctuate sharply and is not a significant driver of short-term economic fluctuations.
+- In the short term, credit is most crucial because borrowing leads to consumption exceeding output, and repayment causes consumption to fall below output.
+- Fluctuations in debt levels create two major cycles:
+  - Short-term debt cycle: Lasts approximately 5-8 years.
+  - Long-term debt cycle: Lasts approximately 75-100 years.
+- The rise and fall of the economy depend mainly on the total amount of credit. Without credit, the economy would grow solely in line with productivity.
+- Due to the existence of credit, the economy experiences cyclical fluctuations, determined by human nature.
+- A cycle that applies both to individuals and the overall economy:
+  - Currently, consumption exceeds income through borrowing.
+  - In the future, consumption must be less than spending to repay debts.
 
-## 货币与信用的区别
+## The Difference Between Money and Credit
 
-- 使用货币进行交易时，交易即刻完成。
-- 使用信用进行交易，例如赊账，同时产生负债和资产，这笔交易直到债务结清时才算完成，负债和资产此时消失。
-- 在现实经济中，大部分货币实际上是信贷。例如，在美国，信贷总额约为50万亿美元，货币供应量（包括M0、M1、M2）约为3万亿美元。
-- 在信贷体系中，通过增加信贷可以短期内提升收入增长，但长期而言并非如此。
-- 信贷本身不是坏事，但它确实会导致经济的周期性波动：
-  - 不良信贷：导致消费超出偿还能力的信贷。
-  - 良性信贷：有效地分配资源并创造能够偿还债务的收入。
-- 借贷形成了周期，周期既有上升也有下降。
+- Transactions completed with money are settled immediately.
+- Transactions completed with credit, such as buying on credit, create liabilities and assets, and are only concluded once the debt is repaid, with liabilities and assets disappearing simultaneously.
+- In reality, most money is actually credit. For example, in the United States, the total credit is approximately $50 trillion, while the total money supply (M0, M1, M2) is about $3 trillion.
+- In a credit system, increasing credit can boost income growth in the short term, but not necessarily in the long term.
+- Credit is not inherently bad, but it does cause cyclical changes in the economy:
+  - Bad credit: Credit leads to consumption that exceeds the ability to repay.
+  - Good credit: Efficiently allocates resources and generates income that can repay debts.
+- Borrowing creates cycles that rise and fall.
 
-## 短期债务周期
+## Short-term Debt Cycle
 
-- 第一阶段：随着经济活动的增加，出现扩张。在此阶段，信贷凭空产生，支出增加，但总销量跟不上支出增长，导致价格上涨，出现通货膨胀。
-- 第二阶段：中央银行通常不希望通货膨胀过高，会提高利率，导致借款减少，还款增加，从而减少支出和收入，价格下跌，引发通货紧缩和经济衰退。
-- 下一个周期：中央银行降低利率，促使经济再次扩张。
+- The first phase: Expansion occurs as economic activity increases; during this stage, credit is created out of thin air, spending increases, but total sales volume does not keep up with the increase in spending, leading to rising prices and inflation.
+- The second phase: The central bank, not wanting high inflation, raises interest rates, making fewer people borrow and increasing repayments, which reduces spending and income. Prices drop, causing deflation and economic recession.
+- The next cycle: The central bank lowers interest rates, leading to another economic expansion.
 
-因此，在短期债务周期中，经济随着利率的变化而呈现机械性的起伏：低利率促进经济扩张，高利率导致经济收缩。
+Thus, in the short-term debt cycle, the economy moves mechanically with interest rate changes: low interest rates lead to expansion, high interest rates lead to contraction.
 
-## 长期债务周期
+## Long-term Debt Cycle
 
-随着短期债务周期的反复，每个周期结束时，经济增长和债务都超过上一个周期（人性驱动），从而形成**长期债务周期**。
+The short-term debt cycles repeat, but after each cycle, economic growth and debt exceed the previous cycle (driven by human nature), forming the **long-term debt cycle**.
 
-- 繁荣时期：
-    - 在此时期，收入增加，资产价格上涨，使得可以借到更多钱以增加消费，形成正向循环，但经济泡沫也随之产生。
-    - 如果债务增长与收入和资产价格的增长速度相匹配，则债务负担可承受，但这种状况无法永久持续。
-- 长期债务顶峰：当债务增长速度超过收入，债务成本增速超过收入增速时，人们被迫削减支出，导致收入进一步下降，债务成本进一步上升，形成负向循环，达到长期债务周期的顶点，周期逆转（例如2008年的次级贷款危机，1929年的大萧条）。
-- 去杠杆化阶段：人们削减支出，收入下降，信贷消失，资产价格下跌，银行面临挤兑，形成恶性循环。由于此时利率已经很低，中央银行无法通过降低利率来挽救局面，整个经济体失去信誉。
-- 去杠杆化可以通过以下四种方式进行，其中一些会导致通货紧缩，其他一些可能导致通货膨胀，决策者需要谨慎**平衡**两者，以和谐地去杠杆化：
-    1. 减少支出：
-        - 在去杠杆化阶段，个人、企业、政府削减支出以偿还债务，但这会导致收入下降，债务负担加重，进而引发通货紧缩。
-        - 企业削减成本，失业率上升。
-    2. 减少债务：
-        - 收入下降和失业率上升导致借款人无法偿还贷款，银行面临挤兑，个人、企业和银行出现债务违约，导致经济严重收缩——萧条，其主要特征是许多依靠信贷支撑的财富因债务违约而归零。
-        - 一些贷款人可能允许债务重组，以避免违约导致债务全部消失。重组手段包括减少还款、延长还款期限、降低利率等，这也会导致债务减少，但资产价格下降，同样导致通货紧缩。
-    3. 财富再分配：
-        - 由于收入下降和失业人数增加，政府税收减少，同时政府需要增加支出，实施刺激计划和救济措施，导致财政赤字增加，政府需向富裕群体筹资。
-        - 政府可能需要向富人征税，将财富转移给穷人以刺激消费和经济，但贫富差距会导致社会紧张和矛盾加剧。
-        - 债务国和债权国之间也存在类似矛盾，1930年代的这种矛盾导致了第二次世界大战和美国的大萧条。
-    4. 增发货币：
-        - 中央银行可以通过增发货币来缓解信贷不足，以此刺激经济，但这可能引起通货膨胀，需避免类似1920年代德国的恶性通货膨胀。
-        - 中央银行可以用新增发的货币购买金融资产和政府债券，美国在大萧条期间和2008年都采取了类似措施，这有助于提升资产价格，帮助拥有金融资产的人提升信誉。
-        - 中央银行购买政府债券有助于政府筹资，发放救济金和实施刺激计划，政府债务可能增加，但总债务负担会下降。
-- 通货再膨胀：当收入水平高于债务，支出增加，经济开始增长，进入通货再膨胀阶段。
-- 失去的十年：萧条和通货再膨胀通常需要持续约10年时间，因此有“失去的十年”这一说法。
+- Prosperity period:
+    - During this period, incomes rise, and asset prices increase simultaneously, allowing more borrowing and consumption, creating a cycle. However, economic bubbles also form.
+    - If debt growth matches the growth rate of income and asset prices, the debt burden remains manageable, but this situation cannot last forever.
+- Peak of long-term debt: As the debt burden increases and the cost of debt grows faster than income, people are forced to cut spending, further reducing income and increasing debt costs, forming a vicious cycle, reaching the peak of long-term debt, and reversing the cycle (e.g., the 2008 subprime mortgage crisis, the 1929 Great Depression).
+- Deleveraging period: People cut spending, income falls, credit disappears, asset prices drop, banks face runs, creating a negative spiral. As interest rates are already low, the central bank cannot reverse the situation by lowering rates, and the entire economy loses credibility.
+- Deleveraging can occur in four ways, some leading to deflation, others to inflation. Policymakers need to carefully **balance** the two to deleverage harmoniously:
+    1. Cut spending:
+        - During deleveraging, individuals, companies, and governments reduce spending to repay debts, leading to decreased income and an increased debt burden, causing deflation.
+        - Companies cut costs, raising unemployment rates.
+    2. Reduce debt:
+        - With falling incomes and rising unemployment rates, borrowers cannot repay loans, banks face runs, and individuals, companies, and banks default, leading to severe economic contraction—depression. The main characteristic is that much of the wealth supported by credit vanishes due to defaults.
+        - Some lenders may allow debt restructuring to prevent total loss from defaults, including reducing repayments, extending terms, lowering interest rates, etc. These measures also reduce debt but cause asset prices to fall, resulting in deflation.
+    3. Wealth redistribution:
+        - With falling incomes and rising unemployment, government tax revenues decrease, while governments need to increase spending on stimulus programs and relief efforts, leading to increased fiscal deficits. Governments must finance from the wealthy.
+        - Governments might need to tax the wealthy to transfer wealth to the poor to stimulate consumption and the economy, but income disparity leads to social tensions and increased conflict.
+        - Similar tensions exist between debtor and creditor nations. In the 1930s, such tensions led to World War II and the Great Depression in the United States.
+    4. Print money:
+        - The central bank can print money to compensate for the lack of credit, stimulating the economy, but this can lead to inflation. Hyperinflation like that of 1920s Germany must be avoided.
+        - The central bank can use newly printed money to purchase financial assets and government bonds, as was done during the Great Depression and the 2008 crisis in the US. This helps raise asset prices and bolsters the credit of those with financial assets.
+        - Central bank purchases of government bonds help the government finance, distribute relief funds, and implement stimulus plans. Government debt may rise, but the total debt burden decreases.
+- Reflation: When income levels exceed debt, spending increases, and the economy grows again, entering the reflation phase.
+- The lost decade: Depressions and reflation typically last about ten years, hence the term "the lost decade."
 
-## 总结
+## Conclusion
 
-综合考虑生产力增长、短期债务周期和长期债务周期，我们可以得到一个有效的模型。
+Combining productivity growth, the short-term debt cycle, and the long-term debt cycle provides a useful model.
 
-尽管现实经济远比这个模型复杂，但基于此模型，我们可以清晰地理解过去、现在的情况，以及预测未来可能的发展路径。
+Although the real economy is much more complex than this model, it helps us clearly understand past and present situations and anticipate potential future developments.
 
-## 三条经验法则
+## Three Rules of Thumb
 
-1. 不要让债务增长速度超过收入增长速度。
-2. 不要让收入增长速度超过生产率增长速度。
-3. 尽一切可能提高生产率。
+1. Do not let debt growth exceed income growth.
+2. Do not let income growth exceed productivity growth.
+3. Strive to increase productivity by all means possible.
