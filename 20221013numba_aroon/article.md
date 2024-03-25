@@ -120,14 +120,14 @@ def low_len_cal(x):
     return (np.minimum.accumulate(x) == x.min()).sum()
 
 def aroon_numpy(df, n):
-    high_len = df['high'].rolling(n).apply(high_len_cal, raw=True, engine='cython')
+    high_len = df['high'].rolling(n).apply(high_len_cal, raw=True, engine='cython') - 1
     aroon_up = 100 * (n - high_len) / n
 
-    low_len = df['low'].rolling(n).apply(low_len_cal, raw=True, engine='cython')
+    low_len = df['low'].rolling(n).apply(low_len_cal, raw=True, engine='cython') - 1
     aroon_down = 100 * (n - low_len) / n
     return aroon_up, aroon_down
 
-%time up_numpy, down_numpy = aroon_ysx(df, n)
+%time up_numpy, down_numpy = aroon_numpy(df, n)
 print('Check up')
 check_signal(up_naive, up_numpy)
 
