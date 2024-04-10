@@ -10,7 +10,7 @@ Code reference is available at [Github](https://github.com/lostleaf/articles/blo
 
 ## Data and Parameters
 
-First, we generate a HLC DataFrame of length 50,000 through a random walk to simulate the trend of a certain commodity.
+First, we generate a HLC candlestick DataFrame of length 50,000 through a random walk to simulate the trend of an arbitrary commodity.
 
 We set the lookback window `n=200`: 
 
@@ -68,10 +68,9 @@ Initially, we implement a naive version of the Aroon indicator using Series as a
 
 ```python
 def aroon_naive(df, n):
-    # 求列的 rolling 窗口内的最大值对于的 index
+    # index of maximum value in the rolling window
     high_len = df['high'].rolling(n, min_periods=1).apply(lambda x: pd.Series(x).idxmax())
 
-    # 当前日距离过去N天最高价的天数
     high_len = df.index - high_len
     aroon_up = 100 * (n - high_len) / n
 
@@ -86,7 +85,7 @@ def aroon_naive(df, n):
 
 This version utilizes DataFrame.rolling and creates a new Series in each lambda function to compute the rolling argmax.
 
-Due to the high cost of creating Series and suboptimal complexity, where complexity = O(number of candles * backhour), this code is exceedingly slow.
+Due to the high cost of creating Series and suboptimal complexity, where complexity = `O(N_candles * N_window)`, this code is exceedingly slow.
 
 Test results:
 
@@ -201,11 +200,11 @@ Num of equal: 50000, Num of not equal: 0, Ratio good: 100.0%
 
 ## Numba + Monotonic Queue Implementation
 
-In the naive numba implementation, although time efficiency was improved by avoiding frequent python function calls, its complexity still remains at O(number of candles * backhour), which is not ideal.
+In the naive numba implementation, although time efficiency was improved by avoiding frequent python function calls, its complexity still remains at `O(N_candles * N_window)`, which is not ideal.
 
-In the field of algorithms, there is a standard optimal solution for rolling argmax, which requires the use of a monotonic queue to optimize, bringing the complexity down to O(number of candles + backhour), a significant reduction.
+In the field of algorithms, there is a standard optimal solution for rolling argmax. It utilizes the monotonic queue, and optimizes the complexity down to `O(N_candles + N_window)`.
 
-The specific principle of this algorithm is more complex and can be referred to in the [LeetCode 239 solution](https://leetcode.cn/problems/sliding-window-maximum/solution/hua-dong-chuang-kou-zui-da-zhi-by-leetco-ki6m/), which is considered hard difficulty on LeetCode.
+The specific principle of this algorithm is complex and can be referred to in the [LeetCode 239 solution](https://leetcode.cn/problems/sliding-window-maximum/solution/hua-dong-chuang-kou-zui-da-zhi-by-leetco-ki6m/), which is considered hard difficulty on LeetCode.
 
 ``` python
 @nb.njit(nb.int32[:](nb.float64[:], nb.int32), cache=True)
