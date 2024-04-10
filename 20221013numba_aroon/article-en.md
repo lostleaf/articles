@@ -4,7 +4,7 @@ AROON is a common technical indicator, whose definition can be found at [Investo
 
 The challenge in implementing this indicator lies in the rolling argmax operator, for which pandas does not provide an official implementation. A naive implementation based on Series results in considerably slow computations.
 
-Optimizing the computation of this indicator presents an interesting problem.
+Optimizing the computation of this indicator presents an interesting but not easy problem.
 
 Code reference is available at [Github](https://github.com/lostleaf/articles/blob/master/20221013numba_aroon/optimize_aroon.ipynb).
 
