@@ -1,20 +1,16 @@
 # 【BMAC2.0-前传】利用 asyncio 和 Websocket 获取并录制币安 K 线行情
 
-众所周知，币安有两种获取 K 线数据的方式 —— REST API 和 Websocket
+众所周知，币安有两种获取 K 线数据的方式——REST API 和 Websocket。其中，Websocket 是币安官方更为推荐的实盘数据获取方式。
 
-BMAC1 通过使用反复调用 REST API 的方式获取闭合 K 线，这样做虽然可以稳定地获取 K 线数据，但速度相对较慢且会消耗大量的 API 权重
-
-BMAC2 则会使用 REST API 和 Websocket 混合驱动的方式，更加高效地获取 K 线数据
-
-本文为 BMAC2 技术报告第一篇，将介绍其中的核心技术：使用 Python asyncio，通过订阅 Websocket K 线数据频道，异步获取并录制币安 K 线行情
+本位将介绍如何利用 Python asyncio 订阅币安 K 线数据 Websocket，异步获取并录制币安 K 线行情。
 
 ## 连接币安行情推送 Websocket 
 
-要通过 Websocket 获取行情，首先需要实现一个稳健的 Websocket 客户端
+要通过 Websocket 获取行情，首先需要实现一个稳健的 Websocket 客户端。
 
-由于本人并不是 HTTP 专家，这里复制并精简了 [python-binance 的 `ReconnectingWebsocket`](https://github.com/sammchardy/python-binance/blob/master/binance/streams.py)，封装为 `ws_basics.py`，直接调用即可
+由于本人并不是 HTTP 专家，这里复制并精简了 [python-binance 的 `ReconnectingWebsocket`](https://github.com/sammchardy/python-binance/blob/master/binance/streams.py)，封装为 `ws_basics.py`，直接调用即可。
 
-在 `binance_market_ws.py` 中，我们定义生成币安 K 线 Websocket 连接的函数如下
+在 `binance_market_ws.py` 中，我们定义生成币安 K 线 Websocket 连接的函数如下：
 
 ``` python
 from ws_basics import ReconnectingWebsocket
@@ -65,7 +61,7 @@ def get_spot_multi_candlesticks_socket(symbols, time_inteval):
 
 ```
 
-通过以下示例代码 `ex1_recv_single.py`，我们尝试通过 Websocket 连接收取 BTCUSDT 永续合约 1 分钟 K 线数据并打印至屏幕
+通过以下示例代码 `ex1_recv_single.py`，我们尝试通过 Websocket 连接接收 BTCUSDT 永续合约 1 分钟 K 线数据并打印至屏幕：
 
 ```python
 import asyncio
@@ -90,7 +86,7 @@ if __name__ == '__main__':
     asyncio.run(main())
 ```
 
-运行以上代码，选取其中较为有代表性的几条数据如下
+运行以上代码，选取其中较为有代表性的几条数据如下：
 
 ```python
 {'stream': 'btcusdt@kline_1m', 'data': {'e': 'kline', 'E': 1719765539838, 's': 'BTCUSDT', 'k': {'t': 1719765480000, 'T': 1719765539999, 's': 'BTCUSDT', 'i': '1m', 'f': 5122041311, 'L': 5122041720, 'o': '61607.90', 'c': '61623.30', 'h': '61623.30', 'l': '61605.30', 'v': '16.692', 'n': 410, 'x': False, 'q': '1028411.77850', 'V': '12.553', 'Q': '773414.33780', 'B': '0'}}}
@@ -98,11 +94,11 @@ if __name__ == '__main__':
 {'stream': 'btcusdt@kline_1m', 'data': {'e': 'kline', 'E': 1719765540545, 's': 'BTCUSDT', 'k': {'t': 1719765540000, 'T': 1719765599999, 's': 'BTCUSDT', 'i': '1m', 'f': 5122041729, 'L': 5122041730, 'o': '61624.90', 'c': '61625.00', 'h': '61625.00', 'l': '61624.90', 'v': '0.026', 'n': 2, 'x': False, 'q': '1602.24770', 'V': '0.003', 'Q': '184.87500', 'B': '0'}}}
 ```
 
-可以看到，每条数据被解析为一个 Python 字典，接下来我们需要解析该数据字典，将其转换为我们熟悉的 DataFrame
+可以看到，每条数据被解析为一个 Python 字典，接下来我们需要解析该数据字典，将其转换为我们熟悉的 DataFrame。
 
 ## 解析币安行情推送数据
 
-根据[币安文档](https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/websocket-market-streams/Kline-Candlestick-Streams)，我们可以将数据字典中的 k 字段与常用的 K 线 DataFrame 列名一一对应
+根据[币安文档](https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/websocket-market-streams/Kline-Candlestick-Streams)，我们可以将数据字典中的 k 字段与常用的 K 线 DataFrame 列名一一对应。
 
 ```python
 def convert_to_dataframe(x, interval_delta):
@@ -130,7 +126,7 @@ def convert_to_dataframe(x, interval_delta):
     return pd.DataFrame(data=[candle_data], columns=columns, index=[candle_data[0] + interval_delta])
 ```
 
-为了数据解析的稳健性，我们还需要更进一步，采用防御性编程，严格检查数据有效性，并判断 K 线是否闭合，仅接收闭合 K 线
+为了数据解析的稳健性，我们还需要进一步采用防御性编程，严格检查数据有效性，并判断 K 线是否闭合，仅接收闭合 K 线。
 
 ```python
 def handle_candle_data(res, interval_delta):
@@ -162,7 +158,7 @@ def handle_candle_data(res, interval_delta):
     return df_candle
 ```
 
-基于以下示例代码 `ex2_parse_data.py`，我们尝试解析上一节中收取的 K 线数据（K 线数据保存为 `ex2_ws_candle.json`）
+基于以下示例代码 `ex2_parse_data.py`，我们尝试解析上一节中接收的 K 线数据（K 线数据保存为 `ex2_ws_candle.json`）。
 
 ```python
 def main():
@@ -185,7 +181,7 @@ if __name__ == '__main__':
     main()
 ```
 
-输出如下
+输出如下：
 
 ```
 Row1 is None
@@ -195,17 +191,17 @@ Row2 candlestick
 Row3 is None
 ```
 
-其中第一条和第三条由于 K 线不闭合，因此被抛弃，输出为 None
+其中第一条和第三条由于 K 线不闭合，因此被抛弃，输出为 None。
 
-第二条为闭合 K 线，被解析为 DataFrame
+第二条为闭合 K 线，被解析为 DataFrame。
 
 ## 单周期多标的 Websocket K 线数据接收器 CandleListener
 
-结合以上两节，可定义 `CandleListener` (`candle_listener.py`)
+结合以上两节，我们可以定义 `CandleListener` (`candle_listener.py`)。
 
-其中主函数为 `start_listen`，负责建立 Websocket 连接并收取 K 线数据
+其中主函数为 `start_listen`，负责建立 Websocket 连接并接收 K 线数据。
 
-`handle_candle_data` 函数则负责解析接收到的 K 线数据，将有效且闭合的 K 线打入消息队列（下一节中简介其作用） `self.que` 中
+`handle_candle_data` 函数则负责解析接收到的 K 线数据，将有效且闭合的 K 线打入消息队列（下一节中简介其作用） `self.que` 中。
 
 ```python
 import asyncio
@@ -345,19 +341,19 @@ class CandleListener:
 
 ## 录制币安 K 线行情
 
-在这一节中，我们通过多个 Websocket 连接，异步接收现货、U 本位合约、币本位合约的 K 线数据，并以 parquet 格式将 K 线数据 DataFrame 存储在硬盘上
+在这一节中，我们通过多个 Websocket 连接，异步接收现货、U 本位合约、币本位合约的 K 线数据，并以 parquet 格式将 K 线数据 DataFrame 存储在硬盘上。
 
-为了达到这一目的，我们首先回顾生产者-消费者架构：生产者-消费者架构是一种并发场景下常见的软件设计模式，其中生产者提供数据，消费者处理数据，生产者和消费者之间通常使用消息队列传递数据
+为了达到这一目的，我们首先回顾生产者-消费者架构：生产者-消费者架构是一种并发场景下常见的软件设计模式，其中生产者提供数据，消费者处理数据，生产者和消费者之间通常使用消息队列传递数据。
 
-这种模式将数据产生和数据处理进行了解耦，在我们的业务场景中，通过使用多生产者和单一消费者，可以保证硬盘写入的正确性
+这种模式将数据产生和数据处理进行了解耦，在我们的业务场景中，通过使用多生产者和单一消费者，可以保证硬盘写入的正确性。
 
 示例代码`ex3_record_multi.py`中，我们定义3个生产者，均为 `CandleListener` 实例：
 
-- `listener_usdt_perp_1m`: 收取 U 本位 BTCUSDT 和 ETHUSDT 合约 1 分钟线数据
-- `listener_coin_perp_3m`: 收取币本位 BTCUSD_PERP 和 ETHUSD_PERP 合约 3 分钟线数据
-- `listener_spot_1m`: 收取现货 BTCUSDT 和 BNBUSDT 1 分钟线数据
+- `listener_usdt_perp_1m`: 接收 U 本位 BTCUSDT 和 ETHUSDT 合约 1 分钟线数据
+- `listener_coin_perp_3m`: 接收币本位 BTCUSD_PERP 和 ETHUSD_PERP 合约 3 分钟线数据
+- `listener_spot_1m`: 接收现货 BTCUSDT 和 BNBUSDT 1 分钟线数据
 
-定义一个消费者，用于更新 K 线数据 
+定义一个消费者，用于更新 K 线数据。
 
 ```python
 def update_candle_data(df_new: pd.DataFrame, symbol, time_interval, trade_type):
@@ -398,7 +394,7 @@ async def dispatcher(main_que: asyncio.Queue):
             logging.warning('Unknown request %s %s', req_type, run_time)
 ```
 
-核心调用代码如下
+核心调用代码如下：
 
 ```python
 # ex3_record_multi.py
@@ -420,7 +416,7 @@ async def main():
                          listener_spot_1m.start_listen(), dispatcher_task)
 ```
 
-运行时输出如下
+运行时输出如下：
 
 ```bash
 20240630 22:59:36 (INFO) - Start record candlestick data
@@ -434,7 +430,7 @@ async def main():
 20240630 23:01:00 (INFO) - Record spot BTCUSDT-1m at 2024-06-30 15:01:00+00:00
 ```
 
-硬盘写入如下 parquet 文件
+硬盘写入的 parquet 文件如下：
 
 ```
 -rw-rw-r-- 1 admin admin 8.8K Jun 30 23:09 coin_futures_BTCUSD_PERP_3m.pqt
@@ -445,7 +441,7 @@ async def main():
 -rw-rw-r-- 1 admin admin 9.4K Jun 30 23:10 usdt_futures_ETHUSDT_1m.pqt
 ```
 
-录制数据如
+录制数据示例如下：
 
 ```python
 In [2]: pd.read_parquet('usdt_futures_BTCUSDT_1m.pqt')
@@ -465,8 +461,8 @@ Out[3]:
 2024-06-30 15:09:00+00:00 2024-06-30 15:06:00+00:00  3388.39  3390.59  3388.39  3390.22  15443.0     45.562138      220.0                       8133.0                     23.994293
 ```
 
-自此，我们基本已经实现了一个简易的 BMAC
+自此，我们基本实现了一个简易的异步币安 K 线数据客户端。
 
-当然，要实现一个稳健的币安实盘数据客户端并不简单，还需要添加更多的逻辑来保证数据的完整性和正确性
+然而，要实现一个稳健的币安实盘数据客户端并不简单，还需要添加更多的逻辑来保证数据的完整性和正确性。
 
-BMAC2.0 本传 ——《BMAC 2.0: REST 和 Websocket 混合驱动的异步币安行情数据客户端》，敬请期待
+敬请期待后续技术报告。
