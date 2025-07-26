@@ -1,93 +1,58 @@
----
-marp: true
-title: BMAC
-theme: default
----
-<!-- headingDivider: 2 -->
+# BMAC v2: 架构、原理及展望
 
-# BMAC v2: 币安异步实盘行情框架
+BMAC (**B**inance **M**arketdata **A**sync **C**lient)，即币安异步实盘行情框架，是由 lostleaf 主导，分享会成员共同参与开发的币安数据开源项目。
 
-**B**inance
-**M**arketdata
-**A**sync
-**C**lient
+BMAC 项目基于 MIT 协议开源，用户可自由使用和修改，仅需保留原作者声明。
 
-牛马直播：*帖子 43314, 44366, 44984, 45170*
+特别感谢 [LeoTsai](https://bbs.quantclass.cn/user/37703) 和 [中央勤暴菊](https://bbs.quantclass.cn/user/51516) 的贡献。
 
-By lostleaf, github.com/lostleaf/binance_datatool
+# 实盘交易的软件工程
 
-## 目录
+从软件工程的角度来看，中心化交易所可视为一个大型交易服务端，而量化交易的实盘软件则是一个自动交易的**客户端软件**，其架构如下图所示：
 
-1. Binance DataTool & BMAC 简介
-1. BMAC 环境与配置
-1. BMAC 原理简介（异步多协程）
-1. 应用1: BmacKit，因子计算
-1. 应用2: BMAC X 中性实盘框架3，数据中心
-1. BMAC v2 反思
+![](image/image.001.jpeg)
 
-## Binance DataTool & BMAC
+整个实盘交易系统可分为三大模块：数据、策略和执行：
 
-Binance DataTool, 币安数据框架，lostleaf 主导，基于 MIT 协议开源，
+- 数据模块：负责获取实盘行情，仅与交易所进行单向交互。BMAC 属于此模块，用于将从交易所获取的实时行情进行解析。
 
-仅访问公有数据 API，无需账户 API Key，不修改币安账户信息，仅访问指定数据目录
+- 策略模块：可细分为因子模块和仓位模块
+    - BMAC 提供了配套的 BmacKit 因子开发包，用于辅助计算因子求值
+    - 仓位模块则因策略而异，不同策略具有不同的仓位管理逻辑
 
-- BMAC：币安异步实盘行情框架，WS + REST
-
-- BHDS：币安历史行情数据框架，AWS 数据中心 + REST
-
-小白：Linux 命令行工具，进阶框架，有难度
-
-牛马：自由修改/测试，邢大API+BMAC（稳上加稳？），欢迎贡献（表扬菊老板）
-
-> MIT协议: 尊重作者著作权，允许修改或测试软件，与作者无关
-
-## 实盘软件工程
-
-自动交易**客户端**
-
-数据：单向交互
-BMAC 实盘行情
-
-BmacKit 因子
-
-执行：双向交互
-
-
-![bg right:70% contain](image/image.001.jpeg)
+- 执行模块：负责与交易所进行双向交互，执行多轮下单并接收成交回报，直至调整至仓位模块所要求的仓位。
 
 # BMAC 环境与配置
 
-帖子 44366
+详细配置说明请参考[帖子 44366](https://bbs.quantclass.cn/thread/44366)
 
 ## Conda 环境
 
-Binance DataTool 自带 `environment.yml`
+Binance DataTool 包含 `environment.yml` 文件。
 
-创建 Conda 环境并激活，环境名默认为 crypto：
+创建并激活 Conda 环境（默认环境名为 crypto）：
 
 ```
 conda env create --file environment.yml
 conda activate crypto
 ```
 
-BMAC 运行在 Python asyncio, 主要使用的库
+BMAC 基于 Python asyncio 技术，主要依赖以下库：
 
 - `aiohttp`: REST API 请求
-- `websockets`: WS 数据接收
-- `pandas`: DataFrame 转化与硬盘输出
+- `websockets`: WebSocket 数据接收
+- `pandas`: DataFrame 转换与硬盘输出
 - `fire`: 命令行封装
-
-如果要使用 BHDS，还需要安装 `aria2`
 
 ## 配置
 
-新建文件夹作为基础目录，例如 `~/udeli_1m`，编写配置文件 `config.json`
+创建基础目录（如 `~/udeli_1m`），并编写配置文件 `config.json`：
 
 ![alt text](config.png)
 
-一个最小化配置, USDT 交割合约 1 分钟线:
+最小化配置示例（USDT 交割合约 1 分钟线）：
 
-``` json
+```json
 {
     "interval": "1m",
     "trade_type": "usdt_deli"
@@ -96,9 +61,9 @@ BMAC 运行在 Python asyncio, 主要使用的库
 
 ## 运行
 
-入口点 `python cli.py bmac start`
+通过入口点 `python cli.py bmac start` 启动。
 
-运行 BMAC
+例如，运行 BMAC 实时获取上述 USDT 交割合约 1 分钟线行情数据：
 
 ```
 python cli.py bmac start ~/udeli_1m
@@ -106,7 +71,7 @@ python cli.py bmac start ~/udeli_1m
 
 ## 运行阶段1: 初始化历史数据
 
-多轮历史数据下载，每轮 499 根[(zdq老板34266)](https://bbs.quantclass.cn/thread/34266)，保存为 DataFrame
+通过多轮历史数据下载，每轮更新 499 根 K 线，以最大化权重效率（参考[帖子34266(zdq)](https://bbs.quantclass.cn/thread/34266)），数据以 DataFrame 格式保存：
 
 ```
 ================== Start Bmac V2 2024-08-03 12:50:03 ===================
@@ -132,7 +97,7 @@ Symbol range: BTCUSDT_240927 -- ETHUSDT_241227
 
 ## 运行阶段2: 实时行情更新
 
-通过 Websocket，实时行情数据
+通过 WebSocket 接收实时行情数据：
 
 ```
 Create WS listen group 0, 1 symbols
@@ -155,44 +120,38 @@ Create WS listen group 5, 1 symbols
 
 ## 运行目录结构
 
-可交易标的信息
+- exginfo_1m: 可交易标的信息
+- usdt_deli_1m: K 线行情
+    - ready file: 文件锁
+    - pqt 文件: 以 parquet 格式序列化的 Pandas DataFrame
 
-K 线行情
-
-ready file 文件锁
-
-传递 DF 给策略
-
-默认 parquet 格式
-
-![bg right:70% contain](folder.png)
-
+![](folder.png)
 
 ## 核心参数
 
-两个核心参数
+两个核心参数：
 
-`interval` K 线时间周期，可以是 1m、5m、1h、4h 等币安官方支持的周期
+`interval`: K 线时间周期，支持币安官方提供的周期，如 1m、5m、1h、4h 等。
 
-`trade_type` 交易标的类型
-- `usdt_spot`: USDT 本位现货，`BTCUSDT` `ETHUSDT`等
-- `btc_spot`: BTC 本位现货，`ETHBTC` 等
-- `usdt_perp`: USDT 本位永续，`BTCUSDT`永续等
-- `coin_perp`: 币本位永续，`BTCUSD`币本位永续等
+`trade_type`: 交易标的类型
+- `usdt_spot`: USDT 本位现货，如 `BTCUSDT`、`ETHUSDT` 等
+- `btc_spot`: BTC 本位现货，如 `ETHBTC` 等
+- `usdt_perp`: USDT 本位永续，如 `BTCUSDT` 永续等
+- `coin_perp`: 币本位永续，如 `BTCUSD` 币本位永续等
 
-参考[帖子44366](https://bbs.quantclass.cn/thread/44366) **核心参数**一节
+详细说明请参考[帖子44366](https://bbs.quantclass.cn/thread/44366)的**核心参数**部分。
 
 ## 可选参数
 
-`num_candles`: 保留 K 线数量，默认 1500，不得超过 10000
+`num_candles`: 保留 K 线数量，默认 1500，上限为 10000。
 
-`funding_rate`: 是否获取资金费率，默认 False
+`funding_rate`: 是否获取资金费率，默认为 False。
 
-`keep_symbols`: symbol 白名单，如有则只获取白名单内的 symbol，默认 None
+`keep_symbols`: symbol 白名单，如设置则仅获取白名单内的 symbol，默认为 None。
 
-`save_type`: K 线数据存储格式，默认 parquet，也可为 feather
+`save_type`: K 线数据存储格式，默认为 parquet，也可选择 feather。
 
-`dingding`: 钉钉配置，默认 None
+`dingding`: 钉钉配置，默认为 None。
 
 ```json
 "dingding": {
@@ -203,78 +162,47 @@ ready file 文件锁
 }
 ```
 
-参考[帖子44366](https://bbs.quantclass.cn/thread/44366) **可选参数**一节
-
+详细说明请参考[帖子44366](https://bbs.quantclass.cn/thread/44366)的**可选参数**部分。
 
 # BMAC 原理简介
 
-部分参考 43314，35389
-
 ## 初始化历史数据
 
-和邢大基础课程原理类似，不涉及 Websocket
+与邢大基础课程原理类似，不涉及 WebSocket。
 
-通过 REST API 获取足够的历史数据，控制权重，分批获取
+通过 REST API 获取历史数据，需注意控制权重，分批获取。
 
-参考[帖子35389](https://bbs.quantclass.cn/thread/35389)
+参考[帖子35389](https://bbs.quantclass.cn/thread/35389)。
 
 ## 实盘数据更新：多协程，生产者-消费者架构
 
-生产者，接收并提供数据
+生产者负责接收和提供数据：
 
-- `CandleListener`: 通过 WS 接收行情数据推送, 抽取自 python-binance
-- `RestFetcher`: 通过 REST API 拉取行情数据；也是 K 线拉取命令的消费者
-- `PeriodAlarm`: 发出拉取 ExgInfo、检查数据完整性命令，相当于 Runtime 循环
+- `CandleListener`: 通过 WebSocket 接收行情数据推送，基于 python-binance 实现
+- `RestFetcher`: 通过 REST API 拉取行情数据，同时作为 K 线拉取命令的消费者
+- `PeriodAlarm`: 发出拉取 ExgInfo、检查数据完整性的命令，相当于 Runtime 循环
 
-消费者`Dispatcher`，处理生产者提供的数据，只有消费者访问硬盘，防止读写错乱
+消费者 `Dispatcher` 负责处理生产者提供的数据，只有消费者可以访问硬盘，防止读写冲突：
 
-- 执行拉取 ExgInfo 命令，写入硬盘，有变动时调整 `CandleListener` 订阅
-- 处理行情数据、资金费等，写入硬盘
+- 执行拉取 ExgInfo 命令，写入硬盘，当有变动时调整 `CandleListener` 订阅
+- 处理行情数据、资金费率等，写入硬盘
 - 检查行情数据完整性，如有缺失，发出 K 线拉取命令
 
-生产者和消费者通过**队列**通信
-- 主队列 `main_que`: 生产者和 `Dispatcher` 通信
-- REST 队列 `rest_que`: `Dispatcher` 和 `RestFetcher` 通信
+生产者和消费者通过队列进行通信：
+- 主队列 `main_que`: 生产者和 `Dispatcher` 之间的通信
+- REST 队列 `rest_que`: `Dispatcher` 和 `RestFetcher` 之间的通信
 
 ## 数据通路
 
-3 生产
+![](image/image.002.jpeg)
 
-1 消费
+# BmacKit：因子计算开发包
 
-2 队列
-
-![bg right:80% contain](image/image.002.jpeg)
-
-# 应用1: BmacKit，因子计算
-
-帖子 44984
-
-## 实盘因子计算
-
-经典动量因子，`factors.PctChg`，如何通过 BMAC 实盘计算？
-
-``` python
-import pandas as pd
-
-
-def signal(*args):
-    df: pd.DataFrame = args[0]
-    n = args[1]
-    factor_name = args[2]
-    df[factor_name] = df['close'].pct_change(n)
-
-    return df
-
-```
-
-BmacKit ! 
-
-跟随西大潮流，BMAC 实盘因子计算开发包
+[帖子 44984](https://bbs.quantclass.cn/thread/44984)
 
 ## BmacSingleSymbolCalculator
 
-单标的多因子计算器，适用于时序趋势类策略
+单标的多因子计算器，适用于时序趋势类策略：
 
 ```python
 class BmacSingleSymbolCalculator:
@@ -321,21 +249,21 @@ FACTOR_LIST = [('PctChg', 100), ('TrdNumMeanV1', 80)]
 run_time = next_run_time(TIME_INTERVAL)
 # 初始化 CandleFileReader
 candle_reader = CandleFileReader(CANDLE_DIR, 'parquet')
-# 初始化，BmacKit 因子计算器
+# 初始化 BmacKit 因子计算器
 calc = BmacSingleSymbolCalculator('BTCUSDT', candle_reader, FACTOR_LIST)
 # 测试因子计算
 df_factor_single = await calc.calc_factors(run_time)
 ```
 
-## BmacSingleSymbolCalculator 计算结果截图
+## BmacSingleSymbolCalculator 计算结果
 
 ![alt text](single.png)
 
-由于使用了 WS，1 秒以内可以完成 BTCUSDT 因子计算
+得益于 WebSocket 的使用，BTCUSDT 因子计算可在 1 秒内完成。
 
 ## BmacAllMarketCalculator
 
-全市场多标的多因子计算器，适用于截面选币类策略
+全市场多标的多因子计算器，适用于截面选币类策略：
 
 ```python
 class BmacAllMarketCalculator(BmacSingleSymbolCalculator):
@@ -364,7 +292,7 @@ class BmacAllMarketCalculator(BmacSingleSymbolCalculator):
 
 ## BmacAllMarketCalculator 案例
 
-导入和因子定义与 BmacSingleSymbolCalculator 相同
+导入和因子定义与 BmacSingleSymbolCalculator 相同：
 
 ```python
 # 当前 run_time
@@ -374,58 +302,32 @@ run_time = next_run_time(TIME_INTERVAL)
 exginfo_reader = CandleFileReader(EXGINFO_DIR, 'parquet')
 candle_reader = CandleFileReader(CANDLE_DIR, 'parquet')
 
-# 初始化，BmacKit 因子计算器
+# 初始化 BmacKit 因子计算器
 all_calc = BmacAllMarketCalculator(exginfo_reader, candle_reader, FACTOR_LIST)
 
 # 测试因子计算
 df_factor_all = await all_calc.calc_all_factors(run_time)
 ```
 
-异步计算全市场因子，几乎没有额外延迟
-
------
+异步计算全市场因子，几乎没有额外延迟。
 
 ![alt](update.png)
 
 ![alt](all_market.png)
 
-# 应用2: BMAC X 中性实盘框架3，数据中心
-
-帖子45170
-
-## 主要改动
-
-以 BMAC K 线数据作为数据源的中性框架 v3 版本 data job
-
-生成 5 分钟全 offset 小时线
-
-1. 把原有从 API 获取 symbol 列表，改为从 bmac exginfo 获取列表
-2. 把原有从 API 获取 5 分钟线，改为从 bmac 获取 K 线
-3. 删除了 funding fee 相关（保温杯用不到
-
-具体参考 [帖子45170](https://bbs.quantclass.cn/thread/45170)
-
 ## 反思, BMAC v2 足够好吗？
 
-优点：使用 WS，不大量消耗权重，高频数据可能性
-缺点：单线程多协程，硬盘 IO 瓶颈
+BMAC v2 的优势：使用 WebSocket，减少权重消耗
 
-更好的架构，适用于中高频交易/日内波段
-微服务化：
-- ZMQ pub/sub (Domain/TCP Socket)
-- Receiver(pub): WS + REST 接收行情
-- Recorder(sub): 录制历史行情写入硬盘
-- Strategy(sub): 历史行情初始化(硬盘)，实时行情交易(ZMQ Socket)
-- BmacKit: 抛弃 Pandas，流式在线计算，(JIT)编译型语言
+BMAC v2 的局限性：
+- 单线程多协程架构
+- 存在硬盘 IO 瓶颈
 
-注1：不适用于超高频（做市）
-注2：小心走火入魔
+建议的优化架构（适用于中高频交易/日内CTA等）—— 微服务化（多进程）：
+- 基于消息队列实现服务间通信，例如 ZMQ pub/sub 模式
+- 行情接收端：基于 WebSocket + REST 获取行情，通过 ZMQ pub 广播
+- 记录端：通过 ZMQ sub 接收并录制历史行情，写入硬盘/数据库
+- 策略端：从硬盘或数据库初始化历史行情，再通过 ZMQ sub 接收行情进行交易
+- BmacKit：考虑使用流式在线计算，可能需要放弃 Pandas 并采用 (JIT)编译型语言
 
-## 谢谢
-
-Github: lostleaf/binance_datatool
-
-43314[【BMAC2.0-前传】利用 asyncio 和 Websocket 获取并录制币安 K 线行情](https://bbs.quantclass.cn/thread/43314)
-44366[【BMAC2.0-正传（上）】BMAC2的配置与使用](https://bbs.quantclass.cn/thread/44366)
-44984[【BMAC2.0-后传】BmacKit: 基于 BMAC 异步高效因子计算架构](https://bbs.quantclass.cn/thread/44984)
-45170[【BMAC X 中性框架3】bmac_kline: 以 BMAC 为数据源的中性实盘全 offset 小时线 data job](https://bbs.quantclass.cn/thread/45170)
+注：此架构不适用于超高频交易（如币圈做市类策略）。
